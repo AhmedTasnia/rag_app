@@ -7,6 +7,17 @@ st.set_page_config(page_title="RAG App", layout="centered")
 
 st.title("📄 RAG App (Deployed Version)")
 
+
+def normalize_question(text: str) -> str:
+    return " ".join(text.strip().lower().split())
+
+
+# Add your fixed question -> answer pairs here.
+SPECIFIC_QA = {
+    normalize_question("what is your name?"): "My name is RAG App Assistant.",
+    normalize_question("who made you?"): "I was created inside this Streamlit RAG app.",
+}
+
 # Upload file
 uploaded_file = st.file_uploader("Upload a text file", type=["txt"])
 
@@ -36,6 +47,14 @@ if uploaded_file is not None:
     query = st.text_input("Ask a question")
 
     if query:
+        normalized_query = normalize_question(query)
+
+        # If query is one of the fixed questions, return fixed answer directly.
+        if normalized_query in SPECIFIC_QA:
+            st.subheader("📌 Answer")
+            st.write(SPECIFIC_QA[normalized_query])
+            st.stop()
+
         docs = db.similarity_search(query, k=2)
 
         # Combine relevant chunks
