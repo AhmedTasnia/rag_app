@@ -2,11 +2,13 @@ import streamlit as st
 from langchain_text_splitters import CharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_community.embeddings import HuggingFaceEmbeddings
-from langchain_community.llms import Ollama
 
-st.title("🧠 Smart RAG App (Specific Answers)")
+st.set_page_config(page_title="RAG App", layout="centered")
 
-uploaded_file = st.file_uploader("Upload a text file")
+st.title("📄 RAG App (Deployed - No AI)")
+
+# Upload file
+uploaded_file = st.file_uploader("Upload a text file", type=["txt"])
 
 if uploaded_file is not None:
     text = uploaded_file.read().decode("utf-8")
@@ -25,32 +27,28 @@ if uploaded_file is not None:
         model_name="sentence-transformers/all-MiniLM-L6-v2"
     )
 
+    # Vector DB
     db = FAISS.from_texts(chunks, embeddings)
 
+    # User input
     query = st.text_input("Ask a question")
 
     if query:
         docs = db.similarity_search(query, k=2)
 
-        # Combine context
-        context = " ".join([doc.page_content for doc in docs])
+        # 🔥 Extract only relevant sentences (IMPORTANT)
+        relevant_text = " ".join([doc.page_content for doc in docs])
 
-        # Local LLM
-        llm = Ollama(model="mistral")
-
-        # 🔥 PROMPT ENGINEERING (THIS IS THE KEY)
-        prompt = f"""
-        Answer the question based only on the context below.
-        Give a short, clear, and specific answer (1-2 sentences).
-
-        Context:
-        {context}
-
-        Question:
-        {query}
-        """
-
-        answer = llm.invoke(prompt)
+        # Try to make answer shorter
+        sentences = relevant_text.split(".")
+        short_answer = ". ".join(sentences[:2])  # first 2 sentences only
 
         st.subheader("📌 Answer")
-        st.write(answer)
+        st.write(short_answer.strip() + ".")
+
+        # Optional (for debugging / explanation)
+        with st.expander("🔍 Source Context"):
+            for i, doc in enumerate(docs):
+                st.write(f"Chunk {i+1}:")
+                st.write(doc.page_content)
+                st.write("---")
